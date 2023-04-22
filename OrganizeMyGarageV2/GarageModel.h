@@ -2,13 +2,23 @@
 #include "ItemStructs.h"
 #include <vector>
 #include <memory>
+#include <random>
+#include <unordered_set>
+#include "PersistentStorage.h"
+
+namespace {
+	constexpr char kCvarCycleFavEnabled[] = "omg_cycle_favorite_presets_enabled";
+	constexpr char kCvarCycleFavShuffle[] = "omg_cycle_favorite_presets_shuffle";
+	constexpr char kCvarCycleFavList[] = "omg_cycle_favorites";
+	constexpr char kCvarCycleFavListDelimiter = '\f'; // hope noone uses this
+}
 
 class InventoryModel;
 
 class GarageModel
 {
 public:
-	explicit GarageModel(std::shared_ptr<GameWrapper> gw, std::shared_ptr<InventoryModel> inventory);
+	explicit GarageModel(std::shared_ptr<GameWrapper> gw, std::shared_ptr<InventoryModel> inv, std::shared_ptr<PersistentStorage> ps, std::shared_ptr<CVarManagerWrapper> cv);
 
 	void RefreshPresets();
 	void RefreshEquippedIndex();
@@ -23,14 +33,31 @@ public:
 	void DeletePreset(const std::string& presetName) const;
 	void RenamePreset(size_t presetIndex, const std::string& newName) const;
 	void EquipItem(size_t presetIndex, const OnlineProdData& itemData, int teamIndex) const;
+	void UpdateFavorite(const std::string& name, bool isFavorite);
+	bool IsFavorite(const std::string& name) const;
+	void LoadFavorites();
 
-	std::shared_ptr<GameWrapper> gw;
+	bool GetFavoritesEnabled() const;
+	bool GetFavoritesShuffle() const;
+
+	bool SetFavoritesEnabled(bool enabled);
+	bool SetFavoritesShuffle(bool shuffle);
+
+	std::shared_ptr<GameWrapper> m_gw;
 	std::vector<PresetData> presets;
 	size_t equippedPresetIndex = 0;
 
 private:
+	void EquipNextFavoritePreset(const char* evName);
+	void SaveFavorites() const;
+	void EquipPreset(size_t presetIndex);
 	void EquipPresetPrivate(const std::string& name) const;
 	PresetData GetPresetData(const LoadoutSetWrapper& loadout) const;
 	std::vector<OnlineProdData> GetItemData(const LoadoutWrapper& loadout) const;
-	std::shared_ptr<InventoryModel> m_inventory;
+
+	std::shared_ptr<InventoryModel> m_inv;
+	std::shared_ptr<PersistentStorage> m_ps;
+	std::shared_ptr<CVarManagerWrapper> m_cv;
+	std::unordered_set<std::string> favorites;
+	bool preventSettingNextFavoritePreset{ false };
 };

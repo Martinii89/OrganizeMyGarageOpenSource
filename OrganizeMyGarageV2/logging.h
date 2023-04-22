@@ -4,12 +4,14 @@
 #include <source_location>
 #include <format>
 #include <memory>
+#include <fstream>
+#include <chrono>
 
 #include "bakkesmod/wrappers/cvarmanagerwrapper.h"
 
 extern std::shared_ptr<CVarManagerWrapper> _globalCvarManager;
-constexpr bool DEBUG_LOG = true;
-
+constexpr bool DEBUG_LOG = false;
+constexpr bool PERSISTENT_LOGGING = false;
 
 struct FormatString
 {
@@ -56,6 +58,24 @@ void LOG(std::string_view format_str, Args&&... args)
 {
 	_globalCvarManager->log(std::vformat(format_str, std::make_format_args(std::forward<Args>(args)...)));
 }
+
+template <typename... Args>
+void DEBUGLOG_PERSIST(std::string_view format_str, Args&&... args)
+{
+	if constexpr (DEBUG_LOG && PERSISTENT_LOGGING) {
+		std::ofstream of;
+		of.open(std::filesystem::temp_directory_path() / "bakkesmod_omg.log", std::ios_base::app);
+
+		using namespace std::chrono;
+		auto local_time = zoned_time{ current_zone(), system_clock::now() };
+
+		of
+			<< std::format("[{}] ", local_time)
+			<< std::vformat(format_str, std::make_format_args(std::forward<Args>(args)...))
+			<< std::endl;
+	}
+}
+
 
 template <typename... Args>
 void LOG(std::wstring_view format_str, Args&&... args)
