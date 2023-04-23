@@ -43,6 +43,13 @@ void OmgView::Render()
 		ImGui::SetTooltip("Shuffle presets instead of going through them sequentially.");
 	}
 
+	bool favoritesNotify = m_vm->GetFavoritesNotify();
+	if (ImGui::Checkbox("Notify on preset change", &favoritesNotify)) {
+		m_vm->SetFavoritesNotify(favoritesNotify);
+	}
+	ImGui::SameLine();
+	HelpMarker("Creates a toast notification on preset change.");
+
 	ImGui::Text("Your Presets");
 	ImGui::SameLine();
 	HelpMarker("Drag to reorder. Double-click to activate");

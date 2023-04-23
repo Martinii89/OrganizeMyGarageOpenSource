@@ -19,7 +19,6 @@ private:
 
 	void RefreshVm() const;
 
-
 	void RenderPresetListItem(size_t index);
 	void RenderLoadoutEditor(const std::vector<OnlineProdData>& loadout, size_t presetIndex, int teamIndex);
 	void RenderPresetDetails(size_t presetIndex);
