@@ -13,8 +13,10 @@ std::shared_ptr<CVarManagerWrapper> _globalCvarManager;
 void OrganizeMyGarageOS::onLoad()
 {
 	_globalCvarManager = cvarManager;
+	persistentStorage = std::make_shared<PersistentStorage>(this, "OMG", true, true);
+
 	inventoryModel = std::make_shared<InventoryModel>(gameWrapper);
-	garageModel = std::make_shared<GarageModel>(gameWrapper, inventoryModel);
+	garageModel = std::make_shared<GarageModel>(gameWrapper, inventoryModel, persistentStorage, cvarManager);
 	garageModel->RefreshPresets();
 	garageModel->RefreshEquippedIndex();
 	view = std::make_shared<OmgView>(garageModel, inventoryModel, gameWrapper);
@@ -25,11 +27,6 @@ void OrganizeMyGarageOS::onLoad()
 
 void OrganizeMyGarageOS::MonitorPresetChanges() const
 {
-	//gameWrapper->HookEventPost("Function TAGame.GFxData_LoadoutSets_TA.EquipPreset", [this](...)
-	//{
-	//	garageModel->RefreshEquippedIndex();
-	//});
-
 	gameWrapper->HookEventPost("Function TAGame.GFxData_LoadoutSets_TA.HandleLoadoutLoaded", [this](...)
 	{
 		garageModel->RefreshEquippedIndex();

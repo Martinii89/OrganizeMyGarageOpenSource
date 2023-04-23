@@ -26,6 +26,23 @@ OmgView::OmgView(std::shared_ptr<GarageModel> vm, std::shared_ptr<InventoryModel
 void OmgView::Render()
 {
 	ImGui::Columns(2);
+
+	bool favoritesEnabled = m_vm->GetFavoritesEnabled();
+	if (ImGui::Checkbox("Cycle through favorite presets", &favoritesEnabled)) {
+		m_vm->SetFavoritesEnabled(favoritesEnabled);
+	}
+	if (ImGui::IsItemHovered()) {
+		ImGui::SetTooltip("Toggle cycling through favorite presets");
+	}
+	
+	bool favoritesShuffle = m_vm->GetFavoritesShuffle();
+	if (ImGui::Checkbox("Shuffle favorite presets", &favoritesShuffle)) {
+		m_vm->SetFavoritesShuffle(favoritesShuffle);
+	}
+	if (ImGui::IsItemHovered()) {
+		ImGui::SetTooltip("Shuffle presets instead of going through them sequentially.");
+	}
+
 	ImGui::Text("Your Presets");
 	ImGui::SameLine();
 	HelpMarker("Drag to reorder. Double-click to activate");
@@ -184,7 +201,11 @@ void OmgView::RenderPresetDetails(size_t presetIndex)
 			});
 		}
 	}
-
+	
+	bool favorite = m_vm->IsFavorite(name);
+	if (ImGui::Checkbox("Favorite", &favorite)) {
+		m_vm->UpdateFavorite(name, favorite);
+	}
 
 	auto draw_color = [](const std::string& lbl, const LinearColor& color)
 	{
@@ -222,7 +243,7 @@ void OmgView::RenderPresetDetails(size_t presetIndex)
 		});
 	}
 	ImGui::SameLine();
-
+ 
 	if (ImGui::Button("Delete"))
 	{
 		m_selectedIndex = 0;
