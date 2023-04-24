@@ -31,6 +31,7 @@ GarageModel::GarageModel(std::shared_ptr<GameWrapper> gw, std::shared_ptr<Invent
 {
 	m_ps->RegisterPersistentCvar(kCvarCycleFavEnabled, "0", "Enable cycling through favorite presets", true, true, 0, true, 1, true);
 	m_ps->RegisterPersistentCvar(kCvarCycleFavShuffle, "0", "Shuffle the favorite presets", true, true, 0, true, 1, true);
+	m_ps->RegisterPersistentCvar(kCvarCycleFavNotify, "0", "Notify on automatic preset change", true, true, 0, true, 1, true);
 	m_ps->RegisterPersistentCvar(kCvarCycleFavList, "", "List of favorites", true, false, 0, false, 1, true).addOnValueChanged([this](...) {
 		this->LoadFavorites();
 	});
@@ -350,6 +351,11 @@ bool GarageModel::GetFavoritesShuffle() const
 	return GetCvarBoolOrFalse(m_cv.get(), kCvarCycleFavShuffle);
 }
 
+bool GarageModel::GetFavoritesNotify() const
+{
+	return GetCvarBoolOrFalse(m_cv.get(), kCvarCycleFavNotify);
+}
+
 bool GarageModel::SetFavoritesEnabled(bool enabled)
 {
 	return SetCvarVariable(m_cv.get(), kCvarCycleFavEnabled, enabled);
@@ -358,6 +364,11 @@ bool GarageModel::SetFavoritesEnabled(bool enabled)
 bool GarageModel::SetFavoritesShuffle(bool shuffle)
 {
 	return SetCvarVariable(m_cv.get(), kCvarCycleFavShuffle, shuffle);
+}
+
+bool GarageModel::SetFavoritesNotify(bool notify)
+{
+	return SetCvarVariable(m_cv.get(), kCvarCycleFavNotify, notify);
 }
 
 void GarageModel::SaveFavorites() const
@@ -421,6 +432,16 @@ void GarageModel::EquipNextFavoritePreset(const char* evName) {
 	else {
 		auto currIdx = std::upper_bound(favIndices.cbegin(), favIndices.cend(), equippedPresetIndex);
 		nextPresetIndex = (currIdx == favIndices.cend()) ? favIndices.front() : *currIdx;
+	}
+
+	if (GetFavoritesNotify()) {
+		// Nasty hack because the notification settings are global: enabling them just for sending this notification
+		const auto oldNotifications = GetCvarBoolOrFalse(m_cv.get(), kCvarGlobalNotificationsEnabled);
+		if (SetCvarVariable(m_cv.get(), kCvarGlobalNotificationsEnabled, true)) {
+			m_gw->Toast("OMG: Next Preset", presets[nextPresetIndex].name, "default", 10.0, ToastType_Info);
+		}
+		if (!oldNotifications)
+			SetCvarVariable(m_cv.get(), kCvarGlobalNotificationsEnabled, false);
 	}
 
 	DEBUGLOG_PERSIST("Equipping preset {}. Total favorites: {}. Previous preset: {}", nextPresetIndex, presets.size(), equippedPresetIndex);

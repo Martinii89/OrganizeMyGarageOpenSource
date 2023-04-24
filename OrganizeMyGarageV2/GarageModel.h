@@ -7,8 +7,10 @@
 #include "PersistentStorage.h"
 
 namespace {
+	constexpr char kCvarGlobalNotificationsEnabled[] = "cl_notifications_enabled_beta"; // at least it's out of alpha phase
 	constexpr char kCvarCycleFavEnabled[] = "omg_cycle_favorite_presets_enabled";
 	constexpr char kCvarCycleFavShuffle[] = "omg_cycle_favorite_presets_shuffle";
+	constexpr char kCvarCycleFavNotify[] = "omg_cycle_favorite_presets_notify";
 	constexpr char kCvarCycleFavList[] = "omg_cycle_favorites";
 	constexpr char kCvarCycleFavListDelimiter = '\f'; // hope noone uses this
 }
@@ -39,9 +41,11 @@ public:
 
 	bool GetFavoritesEnabled() const;
 	bool GetFavoritesShuffle() const;
+	bool GetFavoritesNotify() const;
 
 	bool SetFavoritesEnabled(bool enabled);
 	bool SetFavoritesShuffle(bool shuffle);
+	bool SetFavoritesNotify(bool notify);
 
 	std::shared_ptr<GameWrapper> m_gw;
 	std::vector<PresetData> presets;
