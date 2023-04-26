@@ -12,6 +12,7 @@ namespace {
 	constexpr char kCvarCycleFavShuffle[] = "omg_cycle_favorite_presets_shuffle";
 	constexpr char kCvarCycleFavNotify[] = "omg_cycle_favorite_presets_notify";
 	constexpr char kCvarCycleFavList[] = "omg_cycle_favorites";
+	constexpr char kCvarRandomGoalExplosion[] = "omg_random_goal_explosion";
 	constexpr char kCvarCycleFavListDelimiter = '\f'; // hope noone uses this
 }
 
@@ -35,25 +36,27 @@ public:
 	void DeletePreset(const std::string& presetName) const;
 	void RenamePreset(size_t presetIndex, const std::string& newName) const;
 	void EquipItem(size_t presetIndex, const OnlineProdData& itemData, int teamIndex) const;
+	const std::vector<PresetData> GetPresets() const;
+
+
 	void UpdateFavorite(const std::string& name, bool isFavorite);
 	bool IsFavorite(const std::string& name) const;
 	void LoadFavorites();
-
 	bool GetFavoritesEnabled() const;
-	bool GetFavoritesShuffle() const;
-	bool GetFavoritesNotify() const;
-
 	bool SetFavoritesEnabled(bool enabled);
+	bool GetFavoritesShuffle() const;
 	bool SetFavoritesShuffle(bool shuffle);
+	bool GetFavoritesNotify() const;
 	bool SetFavoritesNotify(bool notify);
+	bool GetRandomGoalExplosionEnabled() const;
+	bool SetRandomGoalExplosionEnabled(bool enabled);
 
-	std::shared_ptr<GameWrapper> m_gw;
-	std::vector<PresetData> presets;
 	size_t equippedPresetIndex = 0;
 
 private:
-	void EquipNextFavoritePreset(const char* evName);
 	void SaveFavorites() const;
+	void EquipNextFavoritePreset(const char* evName);
+	void RandomGoalExplosion(const char* evName);
 	void EquipPreset(size_t presetIndex);
 	void EquipPresetPrivate(const std::string& name) const;
 	PresetData GetPresetData(const LoadoutSetWrapper& loadout) const;
@@ -62,6 +65,8 @@ private:
 	std::shared_ptr<InventoryModel> m_inv;
 	std::shared_ptr<PersistentStorage> m_ps;
 	std::shared_ptr<CVarManagerWrapper> m_cv;
+	std::shared_ptr<GameWrapper> m_gw;
+	std::vector<PresetData> presets;
 	std::unordered_set<std::string> favorites;
 	bool preventSettingNextFavoritePreset{ false };
 };

@@ -44,3 +44,9 @@ void OnlineProdData::SetOfflineProductData(ProductWrapper& productWrapper)
 		}
 	}
 }
+
+std::string OnlineProdData::ToString() const
+{
+	return std::format("Name: {}, Id: {}, Fav: {}, Slot: {}, Lo: {}, Hi: {}",
+		name, prodId, favorite, slot, instanceId.lower_bits, instanceId.upper_bits);
+}
