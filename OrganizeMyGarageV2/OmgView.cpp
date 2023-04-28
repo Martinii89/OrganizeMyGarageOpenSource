@@ -27,6 +27,13 @@ void OmgView::Render()
 {
 	ImGui::Columns(2);
 
+	bool randomGoalExplosion = m_vm->GetRandomGoalExplosionEnabled();
+	if (ImGui::Checkbox("Random goal explosion each game", &randomGoalExplosion)) {
+		m_vm->SetRandomGoalExplosionEnabled(randomGoalExplosion);
+	}
+	ImGui::SameLine();
+	HelpMarker("WARNING: It will modify active preset.");
+
 	bool favoritesEnabled = m_vm->GetFavoritesEnabled();
 	if (ImGui::Checkbox("Cycle through favorite presets", &favoritesEnabled)) {
 		m_vm->SetFavoritesEnabled(favoritesEnabled);
@@ -62,7 +69,7 @@ void OmgView::Render()
 
 	ImGui::BeginChild("the preset table", ImVec2(-1, -m_buttonHight), true);
 
-	for (size_t i = 0; i < m_vm->presets.size(); i++)
+	for (size_t i = 0; i < m_vm->GetPresets().size(); i++)
 	{
 		RenderPresetListItem(i);
 	}
@@ -82,6 +89,7 @@ void OmgView::Render()
 	{
 		OnGameThread([this](...)
 		{
+			m_inventory->InitProducts();
 			m_vm->RefreshPresets();
 			m_vm->RefreshEquippedIndex();
 		});
@@ -110,9 +118,10 @@ void OmgView::OnGameThread(const std::function<void(GameWrapper*)>& theLambda) c
 void OmgView::RenderPresetListItem(size_t index)
 {
 	auto scopeId = ImGui::ScopeId{index};
-	auto& name = m_vm->presets[index].name;
+	const auto& presets = m_vm->GetPresets();
+	auto& name = presets[index].name;
 	const auto indexIsEquipped = m_vm->equippedPresetIndex == index;
-	m_selectedIndex = std::clamp(m_selectedIndex, static_cast<size_t>(0), m_vm->presets.size() - 1);
+	m_selectedIndex = std::clamp(m_selectedIndex, static_cast<size_t>(0), presets.size() - 1);
 
 	auto equippedStyle = ImGui::ScopeStyleColor(ImGuiCol_Text, ImVec4(0.0f, 1.0f, 0.0, 1), indexIsEquipped);
 
@@ -186,7 +195,7 @@ void OmgView::RenderPresetDetails(size_t presetIndex)
 {
 	static int selectedIndexMem = -1;
 	static std::string name;
-	PresetData& preset = m_vm->presets[presetIndex];
+	const PresetData& preset = m_vm->GetPresets()[presetIndex];
 	if (presetIndex != selectedIndexMem)
 	{
 		//Selection changed.

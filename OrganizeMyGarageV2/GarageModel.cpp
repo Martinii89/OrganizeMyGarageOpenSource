@@ -1,4 +1,5 @@
-﻿#include "pch.h"
+﻿#include <unordered_set>
+#include "pch.h"
 #include "GarageModel.h"
 
 #include "HardcodedColors.h"
@@ -24,6 +25,22 @@ bool SetCvarVariable(CVarManagerWrapper* cv, const char* cvarName, bool value) {
 	}
 	return false;
 }
+
+template<typename T>
+T SelectNext(const std::vector<T> items, size_t previous, bool shuffle) {
+	if (items.size() == 1) {
+		return items.front();
+	}
+	if (shuffle) {
+		std::random_device rd;
+		std::mt19937 mt(rd());
+		std::uniform_int_distribution<> dist(0, items.size() - 1); // range is inclusive
+		return items[dist(mt)];
+	}
+	auto currIdx = std::upper_bound(items.cbegin(), items.cend(), previous);
+	return (currIdx == items.cend()) ? items.front() : *currIdx;
+}
+
 }
 
 GarageModel::GarageModel(std::shared_ptr<GameWrapper> gw, std::shared_ptr<InventoryModel> inv, std::shared_ptr<PersistentStorage> ps, std::shared_ptr<CVarManagerWrapper> cv):
@@ -32,6 +49,7 @@ GarageModel::GarageModel(std::shared_ptr<GameWrapper> gw, std::shared_ptr<Invent
 	m_ps->RegisterPersistentCvar(kCvarCycleFavEnabled, "0", "Enable cycling through favorite presets", true, true, 0, true, 1, true);
 	m_ps->RegisterPersistentCvar(kCvarCycleFavShuffle, "0", "Shuffle the favorite presets", true, true, 0, true, 1, true);
 	m_ps->RegisterPersistentCvar(kCvarCycleFavNotify, "0", "Notify on automatic preset change", true, true, 0, true, 1, true);
+	m_ps->RegisterPersistentCvar(kCvarRandomGoalExplosion, "0", "Random Goal Explosion", true, true, 0, true, 1, true);
 	m_ps->RegisterPersistentCvar(kCvarCycleFavList, "", "List of favorites", true, false, 0, false, 1, true).addOnValueChanged([this](...) {
 		this->LoadFavorites();
 	});
@@ -39,7 +57,10 @@ GarageModel::GarageModel(std::shared_ptr<GameWrapper> gw, std::shared_ptr<Invent
 	LoadFavorites();
 
 	for (const char* funName : { "Function TAGame.GameEvent_Soccar_TA.EventMatchEnded",/* "Function TAGame.GameEvent_Soccar_TA.Destroyed" */}) {
-		m_gw->HookEvent(funName, std::bind(&GarageModel::EquipNextFavoritePreset, this, funName));
+		m_gw->HookEvent(funName, [this](auto funName) {
+			EquipNextFavoritePreset(funName.c_str());
+			RandomGoalExplosion(funName.c_str());
+		});
 	}
 
 	// Each kickoff enables changing preset
@@ -168,21 +189,13 @@ void GarageModel::EquipItem(size_t presetIndex, const OnlineProdData& itemData, 
 	auto save = m_gw->GetUserLoadoutSave();
 	auto preset = save.GetPreset(static_cast<int>(presetIndex));
 	preset.EquipProduct(itemData.instanceId, itemData.slot, teamIndex);
-	if (itemData.slot == 0)
+	if (itemData.slot == static_cast<int>(ItemSlots::Body))
 	{
-		int otherTeamIndex = teamIndex == 0 ? 1 : 0;
 		auto [blue, orange] = preset.GetLoadoutData();
-		int otherBody;
-		if (teamIndex == 0)
-		{
-			otherBody = orange.GetLoadout().Get(0);
-		}
-		else
-		{
-			otherBody = blue.GetLoadout().Get(0);
-		}
+		const int otherBody = (teamIndex ? blue : orange).GetLoadout().Get(0);
 		if (otherBody != itemData.prodId)
 		{
+			const int otherTeamIndex = 1 - teamIndex;
 			preset.EquipProduct(itemData.instanceId, itemData.slot, otherTeamIndex);
 		}
 	}
@@ -190,6 +203,11 @@ void GarageModel::EquipItem(size_t presetIndex, const OnlineProdData& itemData, 
 	{
 		save.SetPreviewTeam(teamIndex);
 	}
+}
+
+const std::vector<PresetData> GarageModel::GetPresets() const
+{
+	return presets;
 }
 
 void GarageModel::UpdateFavorite(const std::string& name, bool isFavorite)
@@ -307,7 +325,7 @@ std::vector<OnlineProdData> GarageModel::GetItemData(const LoadoutWrapper& loado
 	for (auto item : loadout.GetOnlineLoadoutV2())
 	{
 		auto data = m_inv->GetProdData(item);
-		DEBUGLOG("InstaceId: {}:{}. slot: {}", item.lower_bits, item.upper_bits, data.slot);
+		DEBUGLOG("InstanceId: {}:{}. slot: {}", item.lower_bits, item.upper_bits, data.slot);
 		res.push_back(data);
 	}
 	return res;
@@ -346,19 +364,14 @@ bool GarageModel::GetFavoritesEnabled() const
 	return GetCvarBoolOrFalse(m_cv.get(), kCvarCycleFavEnabled);
 }
 
-bool GarageModel::GetFavoritesShuffle() const
-{
-	return GetCvarBoolOrFalse(m_cv.get(), kCvarCycleFavShuffle);
-}
-
-bool GarageModel::GetFavoritesNotify() const
-{
-	return GetCvarBoolOrFalse(m_cv.get(), kCvarCycleFavNotify);
-}
-
 bool GarageModel::SetFavoritesEnabled(bool enabled)
 {
 	return SetCvarVariable(m_cv.get(), kCvarCycleFavEnabled, enabled);
+}
+
+bool GarageModel::GetFavoritesShuffle() const
+{
+	return GetCvarBoolOrFalse(m_cv.get(), kCvarCycleFavShuffle);
 }
 
 bool GarageModel::SetFavoritesShuffle(bool shuffle)
@@ -366,9 +379,24 @@ bool GarageModel::SetFavoritesShuffle(bool shuffle)
 	return SetCvarVariable(m_cv.get(), kCvarCycleFavShuffle, shuffle);
 }
 
+bool GarageModel::GetFavoritesNotify() const
+{
+	return GetCvarBoolOrFalse(m_cv.get(), kCvarCycleFavNotify);
+}
+
 bool GarageModel::SetFavoritesNotify(bool notify)
 {
 	return SetCvarVariable(m_cv.get(), kCvarCycleFavNotify, notify);
+}
+
+bool GarageModel::GetRandomGoalExplosionEnabled() const
+{
+	return GetCvarBoolOrFalse(m_cv.get(), kCvarRandomGoalExplosion);
+}
+
+bool GarageModel::SetRandomGoalExplosionEnabled(bool enabled)
+{
+	return SetCvarVariable(m_cv.get(), kCvarRandomGoalExplosion, enabled);
 }
 
 void GarageModel::SaveFavorites() const
@@ -396,7 +424,10 @@ void GarageModel::EquipPreset(size_t presetIndex) {
 	equippedPresetIndex = presetIndex;
 }
 
+
+
 void GarageModel::EquipNextFavoritePreset(const char* evName) {
+	DEBUGLOG("EquipNextFavoritePreset {}", evName);
 	if (!GetCvarBoolOrFalse(m_cv.get(), kCvarCycleFavEnabled))
 		return;
 
@@ -407,7 +438,7 @@ void GarageModel::EquipNextFavoritePreset(const char* evName) {
 	if (std::exchange(preventSettingNextFavoritePreset, true))
 		return;
 
-	DEBUGLOG_PERSIST("Equipping new preset, event name: {}", evName);
+	DEBUGLOG("Equipping new preset, event name: {}", evName);
 
 	std::vector<size_t> favIndices;
 	favIndices.reserve(presets.size());
@@ -420,19 +451,7 @@ void GarageModel::EquipNextFavoritePreset(const char* evName) {
 	if (favIndices.empty())
 		return;
 
-	size_t nextPresetIndex = 0;
-	if (favIndices.size() == 1) {
-		nextPresetIndex = favIndices.front();
-	} else if (GetCvarBoolOrFalse(m_cv.get(), kCvarCycleFavShuffle)) {
-		std::random_device rd;
-		std::mt19937 mt(rd());
-		std::uniform_int_distribution<> dist(0, favIndices.size() - 1); // range is inclusive
-		nextPresetIndex = favIndices[dist(mt)];
-	}
-	else {
-		auto currIdx = std::upper_bound(favIndices.cbegin(), favIndices.cend(), equippedPresetIndex);
-		nextPresetIndex = (currIdx == favIndices.cend()) ? favIndices.front() : *currIdx;
-	}
+	size_t nextPresetIndex = SelectNext(favIndices, equippedPresetIndex, GetCvarBoolOrFalse(m_cv.get(), kCvarCycleFavShuffle));
 
 	if (GetFavoritesNotify()) {
 		// Nasty hack because the notification settings are global: enabling them just for sending this notification
@@ -444,7 +463,48 @@ void GarageModel::EquipNextFavoritePreset(const char* evName) {
 			SetCvarVariable(m_cv.get(), kCvarGlobalNotificationsEnabled, false);
 	}
 
-	DEBUGLOG_PERSIST("Equipping preset {}. Total favorites: {}. Previous preset: {}", nextPresetIndex, presets.size(), equippedPresetIndex);
+	DEBUGLOG("Equipping preset {}. Total favorites: {}. Previous preset: {}", nextPresetIndex, presets.size(), equippedPresetIndex);
 
 	EquipPreset(nextPresetIndex);
+}
+
+void GarageModel::RandomGoalExplosion(const char* evName)
+{
+	DEBUGLOG("RandomGoalExplosion {}", evName);
+	if (!GetCvarBoolOrFalse(m_cv.get(), kCvarRandomGoalExplosion))
+		return;
+	const int slotId = static_cast<int>(ItemSlots::GoalExplosion);
+
+	ProductInstanceID currentGoalExplosionInstanceId{ 0, 0 };
+	for (const auto& item : presets[equippedPresetIndex].loadout) {
+		if (item.slot == slotId) {
+			currentGoalExplosionInstanceId = item.instanceId;
+			break;
+		}
+	}
+
+	const auto& goalExplosions = m_inv->GetSlotProducts(slotId);
+	/* TODO: Favorited could possibly be calculated only once
+	 * because it seems OMG does not refresh inventory data during lifetime.
+	 * Leaving it as is in hope that changes (or I do it eventually in another diff).
+	 */
+	std::vector<size_t> favorited;
+	size_t currentGoalExplosionFavIdx = 0; // useful if we'll want to cycle through them
+	for (size_t i = 0; i < goalExplosions.size(); ++i) {
+		const auto& goalExplosion = goalExplosions[i];
+		if (!goalExplosion.favorite)
+			continue;
+		if (goalExplosion.instanceId == currentGoalExplosionInstanceId)
+			currentGoalExplosionFavIdx = i;
+		else 
+			favorited.push_back(i);
+	}
+
+	const auto& nextGoalExplosion = goalExplosions[SelectNext(favorited, currentGoalExplosionFavIdx, true)];
+
+	LOG("Equipping goal explosion {}!", nextGoalExplosion.name);
+
+	for (int itemIndex : {0, 1})
+		EquipItem(equippedPresetIndex, nextGoalExplosion, itemIndex);
+
 }

@@ -9,10 +9,13 @@ struct OnlineProdData {
 	int slot = -1;
 	bool canEquip = false;
 	std::set<int> compatibleBodies;
+	bool favorite{ false };
 
 	[[nodiscard]] bool IsBodyCompatible(int body) const;
 
 	void SetOfflineProductData(ProductWrapper& productWrapper);
+
+	std::string ToString() const;
 };
 
 struct PaintData

@@ -18,17 +18,17 @@ InventoryModel::InventoryModel(std::shared_ptr<GameWrapper> gw): m_gw(std::move(
 void InventoryModel::InitSlotIcons()
 {
 	auto iconFolder = m_gw->GetDataFolder() / "OrganizeMyGarageOS";
-	m_slotIcons[0] = std::make_shared<ImageWrapper>(iconFolder / "Body.png", false, true);
-	m_slotIcons[1] = std::make_shared<ImageWrapper>(iconFolder / "Skin.png", false, true);
-	m_slotIcons[2] = std::make_shared<ImageWrapper>(iconFolder / "Wheels.png", false, true);
-	m_slotIcons[3] = std::make_shared<ImageWrapper>(iconFolder / "Boost.png", false, true);
-	m_slotIcons[4] = std::make_shared<ImageWrapper>(iconFolder / "Antenna.png", false, true);
-	m_slotIcons[5] = std::make_shared<ImageWrapper>(iconFolder / "Hat.png", false, true);
-	m_slotIcons[7] = std::make_shared<ImageWrapper>(iconFolder / "Paint.png", false, true);
-	m_slotIcons[12] = m_slotIcons[7];
-	m_slotIcons[13] = std::make_shared<ImageWrapper>(iconFolder / "EngineAudio.png", false, true);
-	m_slotIcons[14] = std::make_shared<ImageWrapper>(iconFolder / "Trail.png", false, true);
-	m_slotIcons[15] = std::make_shared<ImageWrapper>(iconFolder / "GoalFX.png", false, true);
+	m_slotIcons[static_cast<int>(ItemSlots::Body)] = std::make_shared<ImageWrapper>(iconFolder / "Body.png", false, true);
+	m_slotIcons[static_cast<int>(ItemSlots::Decal)] = std::make_shared<ImageWrapper>(iconFolder / "Skin.png", false, true);
+	m_slotIcons[static_cast<int>(ItemSlots::Wheels)] = std::make_shared<ImageWrapper>(iconFolder / "Wheels.png", false, true);
+	m_slotIcons[static_cast<int>(ItemSlots::Boost)] = std::make_shared<ImageWrapper>(iconFolder / "Boost.png", false, true);
+	m_slotIcons[static_cast<int>(ItemSlots::Antenna)] = std::make_shared<ImageWrapper>(iconFolder / "Antenna.png", false, true);
+	m_slotIcons[static_cast<int>(ItemSlots::Topper)] = std::make_shared<ImageWrapper>(iconFolder / "Hat.png", false, true);
+	m_slotIcons[static_cast<int>(ItemSlots::Paint)] = std::make_shared<ImageWrapper>(iconFolder / "Paint.png", false, true);
+	m_slotIcons[static_cast<int>(ItemSlots::PaintAlt)] = m_slotIcons[static_cast<int>(ItemSlots::Paint)];
+	m_slotIcons[static_cast<int>(ItemSlots::EngineSound)] = std::make_shared<ImageWrapper>(iconFolder / "EngineAudio.png", false, true);
+	m_slotIcons[static_cast<int>(ItemSlots::Trail)] = std::make_shared<ImageWrapper>(iconFolder / "Trail.png", false, true);
+	m_slotIcons[static_cast<int>(ItemSlots::GoalExplosion)] = std::make_shared<ImageWrapper>(iconFolder / "GoalFX.png", false, true);
 }
 
 OnlineProdData InventoryModel::GetProdData(OnlineProductWrapper& onlineProd)
@@ -43,7 +43,7 @@ OnlineProdData InventoryModel::GetProdData(OnlineProductWrapper& onlineProd)
 	auto productWrapper = onlineProd.GetProduct();
 	data.SetOfflineProductData(productWrapper);
 	data.instanceId = onlineProd.GetInstanceIDV2();
-
+	data.favorite = onlineProd.IsFavorited();
 	std::string seEdition;
 
 	auto attributes = onlineProd.GetAttributes();
@@ -92,6 +92,7 @@ OnlineProdData InventoryModel::GetProdData(const ProductInstanceID& instanceId)
 	}
 	OnlineProdData item;
 	const auto productId = instanceId.lower_bits;
+	// TODO: GetProduct should return if item is favorited.
 	if (auto product = items.GetProduct(productId))
 	{
 		// Non default items can't be equipped without a valid instance id..
@@ -111,20 +112,23 @@ OnlineProdData InventoryModel::GetProdData(const ProductInstanceID& instanceId)
 
 void InventoryModel::InitProducts()
 {
+	m_products.clear();
+
 	auto items = m_gw->GetItemsWrapper();
 
 	auto onlineProductWrappers = items.GetOwnedProducts();
 	auto c = onlineProductWrappers.Count();
 	LOG("OwnedProducts: {}", c);
-	
+
 	for (auto onlineProd : onlineProductWrappers)
 	{
 		auto data = GetProdData(onlineProd);
 		m_products[data.slot].push_back(data);
+		DEBUGLOG("Online Item: {}", data.ToString());
 	}
 	auto productWrappers = items.GetCachedUnlockedProducts();
 	auto c2 = productWrappers.Count();
-	LOG("CachedUnlockedProduct: {}", c);
+	LOG("CachedUnlockedProducts: {}", c2);
 	for (auto unlockedProduct : productWrappers)
 	{
 		if (unlockedProduct.IsNull()) continue;
@@ -133,6 +137,7 @@ void InventoryModel::InitProducts()
 		if (data.prodId != 0)
 		{
 			m_products[data.slot].push_back(data);
+			DEBUGLOG("Cached Item: {}", data.ToString());
 		}
 	}
 
@@ -150,6 +155,7 @@ void InventoryModel::InitProducts()
 			defaultItem.slot = slotIndex;
 			slotProducts.push_back(defaultItem);
 		}
+		// TODO: We should eliminate duplicates here. They occur when merging online and offline data. Matching by name & slot should be enough. We should prefer Online version as it has instance ID.
 		std::ranges::sort(slotProducts, {}, &OnlineProdData::name);
 	}
 
