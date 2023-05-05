@@ -120,7 +120,7 @@ void OmgView::RenderPresetListItem(size_t index)
 	auto scopeId = ImGui::ScopeId{index};
 	const auto& presets = m_vm->GetPresets();
 	auto& name = presets[index].name;
-	const auto indexIsEquipped = m_vm->equippedPresetIndex == index;
+	const auto indexIsEquipped = m_vm->GetCurrentPresetIndex() == index;
 	m_selectedIndex = std::clamp(m_selectedIndex, static_cast<size_t>(0), presets.size() - 1);
 
 	auto equippedStyle = ImGui::ScopeStyleColor(ImGuiCol_Text, ImVec4(0.0f, 1.0f, 0.0, 1), indexIsEquipped);
@@ -195,7 +195,8 @@ void OmgView::RenderPresetDetails(size_t presetIndex)
 {
 	static int selectedIndexMem = -1;
 	static std::string name;
-	const PresetData& preset = m_vm->GetPresets()[presetIndex];
+	const auto& presets = m_vm->GetPresets();
+	const PresetData& preset = presets[presetIndex];
 	if (presetIndex != selectedIndexMem)
 	{
 		//Selection changed.

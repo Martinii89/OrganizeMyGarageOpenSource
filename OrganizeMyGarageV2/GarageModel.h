@@ -36,7 +36,8 @@ public:
 	void DeletePreset(const std::string& presetName) const;
 	void RenamePreset(size_t presetIndex, const std::string& newName) const;
 	void EquipItem(size_t presetIndex, const OnlineProdData& itemData, int teamIndex) const;
-	const std::vector<PresetData> GetPresets() const;
+	const std::vector<PresetData>& GetPresets() const;
+	size_t GetCurrentPresetIndex() const;
 
 
 	void UpdateFavorite(const std::string& name, bool isFavorite);
@@ -51,8 +52,6 @@ public:
 	bool GetRandomGoalExplosionEnabled() const;
 	bool SetRandomGoalExplosionEnabled(bool enabled);
 
-	size_t equippedPresetIndex = 0;
-
 private:
 	void SaveFavorites() const;
 	void EquipNextFavoritePreset(const char* evName);
@@ -62,6 +61,7 @@ private:
 	PresetData GetPresetData(const LoadoutSetWrapper& loadout) const;
 	std::vector<OnlineProdData> GetItemData(const LoadoutWrapper& loadout) const;
 
+	size_t equippedPresetIndex = 0;
 	std::shared_ptr<InventoryModel> m_inv;
 	std::shared_ptr<PersistentStorage> m_ps;
 	std::shared_ptr<CVarManagerWrapper> m_cv;

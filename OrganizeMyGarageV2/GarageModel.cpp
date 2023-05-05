@@ -205,9 +205,13 @@ void GarageModel::EquipItem(size_t presetIndex, const OnlineProdData& itemData, 
 	}
 }
 
-const std::vector<PresetData> GarageModel::GetPresets() const
+const std::vector<PresetData>& GarageModel::GetPresets() const
 {
 	return presets;
+}
+
+size_t GarageModel::GetCurrentPresetIndex() const {
+	return equippedPresetIndex;
 }
 
 void GarageModel::UpdateFavorite(const std::string& name, bool isFavorite)
