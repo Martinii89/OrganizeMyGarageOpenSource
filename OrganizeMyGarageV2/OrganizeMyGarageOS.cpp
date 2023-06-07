@@ -4,6 +4,7 @@
 #include "OmgView.h"
 #include "GarageModel.h"
 #include "InventoryModel.h"
+#include "RandomPresetSelector.h"
 #include "utils/parser.h"
 
 BAKKESMOD_PLUGIN(OrganizeMyGarageOS, "Garage organizer", plugin_version, PLUGINTYPE_FREEPLAY)
@@ -16,10 +17,11 @@ void OrganizeMyGarageOS::onLoad()
 	persistentStorage = std::make_shared<PersistentStorage>(this, "OMG", true, true);
 
 	inventoryModel = std::make_shared<InventoryModel>(gameWrapper);
-	garageModel = std::make_shared<GarageModel>(gameWrapper, inventoryModel, persistentStorage, cvarManager);
+	garageModel = std::make_shared<GarageModel>(gameWrapper, inventoryModel);
 	garageModel->RefreshPresets();
 	garageModel->RefreshEquippedIndex();
-	view = std::make_shared<OmgView>(garageModel, inventoryModel, gameWrapper);
+	auto randomPresetSelector = std::make_shared<RandomPresetSelector>(gameWrapper, persistentStorage, cvarManager, garageModel, inventoryModel);
+	view = std::make_shared<OmgView>(garageModel, inventoryModel, gameWrapper, randomPresetSelector);
 
 	MonitorPresetChanges();
 	RegisterConsoleCommands();

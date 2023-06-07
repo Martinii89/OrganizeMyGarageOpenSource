@@ -16,10 +16,11 @@ size_t findCaseInsensitive(std::string data, std::string toSearch, size_t pos = 
 }
 
 
-OmgView::OmgView(std::shared_ptr<GarageModel> vm, std::shared_ptr<InventoryModel> inventory, std::shared_ptr<GameWrapper> gw):
-	m_vm(std::move(vm)),
-	m_inventory(std::move(inventory)),
-	m_gw(std::move(gw))
+OmgView::OmgView(std::shared_ptr<GarageModel> gm, std::shared_ptr<InventoryModel> im, std::shared_ptr<GameWrapper> gw, std::shared_ptr<RandomPresetSelector> rps):
+	m_gm(std::move(gm)),
+	m_im(std::move(im)),
+	m_gw(std::move(gw)),
+	m_rps(std::move(rps))
 {
 }
 
@@ -27,32 +28,32 @@ void OmgView::Render()
 {
 	ImGui::Columns(2);
 
-	bool randomGoalExplosion = m_vm->GetRandomGoalExplosionEnabled();
+	bool randomGoalExplosion = m_rps->GetRandomGoalExplosionEnabled();
 	if (ImGui::Checkbox("Random goal explosion each game", &randomGoalExplosion)) {
-		m_vm->SetRandomGoalExplosionEnabled(randomGoalExplosion);
+		m_rps->SetRandomGoalExplosionEnabled(randomGoalExplosion);
 	}
 	ImGui::SameLine();
 	HelpMarker("WARNING: It will modify active preset.");
 
-	bool favoritesEnabled = m_vm->GetFavoritesEnabled();
+	bool favoritesEnabled = m_rps->GetFavoritesEnabled();
 	if (ImGui::Checkbox("Cycle through favorite presets", &favoritesEnabled)) {
-		m_vm->SetFavoritesEnabled(favoritesEnabled);
+		m_rps->SetFavoritesEnabled(favoritesEnabled);
 	}
 	if (ImGui::IsItemHovered()) {
 		ImGui::SetTooltip("Toggle cycling through favorite presets");
 	}
 	
-	bool favoritesShuffle = m_vm->GetFavoritesShuffle();
+	bool favoritesShuffle = m_rps->GetFavoritesShuffle();
 	if (ImGui::Checkbox("Shuffle favorite presets", &favoritesShuffle)) {
-		m_vm->SetFavoritesShuffle(favoritesShuffle);
+		m_rps->SetFavoritesShuffle(favoritesShuffle);
 	}
 	if (ImGui::IsItemHovered()) {
 		ImGui::SetTooltip("Shuffle presets instead of going through them sequentially.");
 	}
 
-	bool favoritesNotify = m_vm->GetFavoritesNotify();
+	bool favoritesNotify = m_rps->GetFavoritesNotify();
 	if (ImGui::Checkbox("Notify on preset change", &favoritesNotify)) {
-		m_vm->SetFavoritesNotify(favoritesNotify);
+		m_rps->SetFavoritesNotify(favoritesNotify);
 	}
 	ImGui::SameLine();
 	HelpMarker("Creates a toast notification on preset change.");
@@ -69,7 +70,7 @@ void OmgView::Render()
 
 	ImGui::BeginChild("the preset table", ImVec2(-1, -m_buttonHight), true);
 
-	for (size_t i = 0; i < m_vm->GetPresets().size(); i++)
+	for (size_t i = 0; i < m_gm->GetPresets().size(); i++)
 	{
 		RenderPresetListItem(i);
 	}
@@ -80,7 +81,7 @@ void OmgView::Render()
 	{
 		OnGameThread([this](...)
 		{
-			static_cast<void>(m_vm->AddPreset());
+			static_cast<void>(m_gm->AddPreset());
 			RefreshVm();
 		});
 	}
@@ -89,9 +90,9 @@ void OmgView::Render()
 	{
 		OnGameThread([this](...)
 		{
-			m_inventory->InitProducts();
-			m_vm->RefreshPresets();
-			m_vm->RefreshEquippedIndex();
+			m_im->InitProducts();
+			m_gm->RefreshPresets();
+			m_gm->RefreshEquippedIndex();
 		});
 	}
 
@@ -106,8 +107,8 @@ void OmgView::Render()
 
 void OmgView::RefreshVm() const
 {
-	m_vm->RefreshPresets();
-	m_vm->RefreshEquippedIndex();
+	m_gm->RefreshPresets();
+	m_gm->RefreshEquippedIndex();
 }
 
 void OmgView::OnGameThread(const std::function<void(GameWrapper*)>& theLambda) const
@@ -118,9 +119,9 @@ void OmgView::OnGameThread(const std::function<void(GameWrapper*)>& theLambda) c
 void OmgView::RenderPresetListItem(size_t index)
 {
 	auto scopeId = ImGui::ScopeId{index};
-	const auto& presets = m_vm->GetPresets();
+	const auto& presets = m_gm->GetPresets();
 	auto& name = presets[index].name;
-	const auto indexIsEquipped = m_vm->GetCurrentPresetIndex() == index;
+	const auto indexIsEquipped = m_gm->GetCurrentPresetIndex() == index;
 	m_selectedIndex = std::clamp(m_selectedIndex, static_cast<size_t>(0), presets.size() - 1);
 
 	auto equippedStyle = ImGui::ScopeStyleColor(ImGuiCol_Text, ImVec4(0.0f, 1.0f, 0.0, 1), indexIsEquipped);
@@ -132,7 +133,7 @@ void OmgView::RenderPresetListItem(size_t index)
 		{
 			OnGameThread([this, name](...)
 			{
-				m_vm->EquipPreset(name);
+				m_gm->EquipPreset(name);
 			});
 		}
 		m_selectedIndex = index;
@@ -144,14 +145,14 @@ void OmgView::RenderLoadoutEditor(const std::vector<OnlineProdData>& loadout, si
 {
 	static std::set slotsToDraw = {0, 1, 2, 3, 4, 5, 7, 12, 13, 14, 15};
 	int bodyId = loadout[0].prodId;
-	auto lockedSlots = m_inventory->GetForcedSlotForBody(bodyId);
+	auto lockedSlots = m_im->GetForcedSlotForBody(bodyId);
 	for (auto& equippedItem : loadout)
 	{
 		if (!slotsToDraw.contains(equippedItem.slot))
 		{
 			continue;
 		}
-		if (auto iconRes = m_inventory->GetSlotIcon(equippedItem.slot))
+		if (auto iconRes = m_im->GetSlotIcon(equippedItem.slot))
 		{
 			ImGui::Image(iconRes->GetImGuiTex(), {32, 32});
 			ImGui::SameLine();
@@ -163,7 +164,7 @@ void OmgView::RenderLoadoutEditor(const std::vector<OnlineProdData>& loadout, si
 		if (ImGui::BeginSearchableCombo(std::format("##LoadoutSlotSelector{}", equippedItem.slot).c_str(), equippedItem.name.c_str(), inputBuffer, 64, "Type to filter"))
 		{
 			const std::string filterStr(inputBuffer);
-			const auto slotProducts = m_inventory->GetSlotProducts(equippedItem.slot);
+			const auto slotProducts = m_im->GetSlotProducts(equippedItem.slot);
 			for (auto& inventoryProduct : slotProducts)
 			{
 				const bool selected = equippedItem.instanceId == inventoryProduct.instanceId;
@@ -176,7 +177,7 @@ void OmgView::RenderLoadoutEditor(const std::vector<OnlineProdData>& loadout, si
 				{
 					OnGameThread([this, inventoryProduct, presetIndex, teamIndex](auto gw)
 					{
-						m_vm->EquipItem(presetIndex, inventoryProduct, teamIndex);
+						m_gm->EquipItem(presetIndex, inventoryProduct, teamIndex);
 						RefreshVm();
 					});
 				}
@@ -195,7 +196,7 @@ void OmgView::RenderPresetDetails(size_t presetIndex)
 {
 	static int selectedIndexMem = -1;
 	static std::string name;
-	const auto& presets = m_vm->GetPresets();
+	const auto& presets = m_gm->GetPresets();
 	const PresetData& preset = presets[presetIndex];
 	if (presetIndex != selectedIndexMem)
 	{
@@ -213,15 +214,15 @@ void OmgView::RenderPresetDetails(size_t presetIndex)
 		{
 			OnGameThread([this, presetIndex, name = name](auto gw)
 			{
-				m_vm->RenamePreset(presetIndex, name);
+				m_gm->RenamePreset(presetIndex, name);
 				RefreshVm();
 			});
 		}
 	}
 	
-	bool favorite = m_vm->IsFavorite(name);
+	bool favorite = m_rps->IsFavorite(name);
 	if (ImGui::Checkbox("Favorite", &favorite)) {
-		m_vm->UpdateFavorite(name, favorite);
+		m_rps->UpdateFavorite(name, favorite);
 	}
 
 	auto draw_color = [](const std::string& lbl, const LinearColor& color)
@@ -255,7 +256,7 @@ void OmgView::RenderPresetDetails(size_t presetIndex)
 	{
 		OnGameThread([this, name = preset.name](auto gw)
 		{
-			m_vm->CopyPreset(name);
+			m_gm->CopyPreset(name);
 			RefreshVm();
 		});
 	}
@@ -266,7 +267,7 @@ void OmgView::RenderPresetDetails(size_t presetIndex)
 		m_selectedIndex = 0;
 		OnGameThread([this, name = preset.name](auto gw)
 		{
-			m_vm->DeletePreset(name);
+			m_gm->DeletePreset(name);
 			RefreshVm();
 		});
 	}
@@ -276,7 +277,7 @@ void OmgView::RenderPresetDetails(size_t presetIndex)
 	{
 		OnGameThread([this, name = preset.name](auto gw)
 		{
-			m_vm->EquipPreset(name);
+			m_gm->EquipPreset(name);
 		});
 	}
 }
@@ -308,15 +309,15 @@ void OmgView::DragAndDropPreset(size_t& index) const
 			{
 				if (ImGui::GetIO().KeyShift)
 				{
-					m_vm->SwapPreset(index, sourceIndex);
+					m_gm->SwapPreset(index, sourceIndex);
 				}
 				else
 				{
-					m_vm->MovePreset(index, sourceIndex);
+					m_gm->MovePreset(index, sourceIndex);
 				}
 
-				m_vm->RefreshPresets();
-				m_vm->RefreshEquippedIndex();
+				m_gm->RefreshPresets();
+				m_gm->RefreshEquippedIndex();
 			});
 			//cvarManager->log("Swap: " + std::to_string(index) + " with " + std::to_string(payload_n));
 		}

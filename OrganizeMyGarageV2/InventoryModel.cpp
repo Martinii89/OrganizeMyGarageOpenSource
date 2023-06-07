@@ -86,7 +86,7 @@ OnlineProdData InventoryModel::GetProdData(const ProductInstanceID& instanceId)
 {
 	auto items = m_gw->GetItemsWrapper();
 	if (!items) return {};
-	if (auto onlineProduct = items.GetOnlineProduct(instanceId.lower_bits))
+	if (auto onlineProduct = items.GetOnlineProduct(instanceId))
 	{
 		return GetProdData(onlineProduct);
 	}
