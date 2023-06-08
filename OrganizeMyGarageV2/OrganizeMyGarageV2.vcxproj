@@ -125,6 +125,7 @@
     <ClCompile Include="RandomPresetSelector.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CVarManagerSingleton.h" />
     <ClInclude Include="HardcodedColors.h" />
     <ClInclude Include="ImguiUtils.h" />
     <ClInclude Include="imgui\imconfig.h" />

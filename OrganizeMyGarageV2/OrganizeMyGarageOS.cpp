@@ -9,18 +9,16 @@
 
 BAKKESMOD_PLUGIN(OrganizeMyGarageOS, "Garage organizer", plugin_version, PLUGINTYPE_FREEPLAY)
 
-std::shared_ptr<CVarManagerWrapper> _globalCvarManager;
-
 void OrganizeMyGarageOS::onLoad()
 {
-	_globalCvarManager = cvarManager;
+	CVarManagerSingleton::getInstance().SetCvarManager(cvarManager);
 	persistentStorage = std::make_shared<PersistentStorage>(this, "OMG", true, true);
 
 	inventoryModel = std::make_shared<InventoryModel>(gameWrapper);
 	garageModel = std::make_shared<GarageModel>(gameWrapper, inventoryModel);
 	garageModel->RefreshPresets();
 	garageModel->RefreshEquippedIndex();
-	auto randomPresetSelector = std::make_shared<RandomPresetSelector>(gameWrapper, persistentStorage, cvarManager, garageModel, inventoryModel);
+	auto randomPresetSelector = std::make_shared<RandomPresetSelector>(gameWrapper, persistentStorage, garageModel, inventoryModel);
 	view = std::make_shared<OmgView>(garageModel, inventoryModel, gameWrapper, randomPresetSelector);
 
 	MonitorPresetChanges();

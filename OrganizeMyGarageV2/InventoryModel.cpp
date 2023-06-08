@@ -92,7 +92,6 @@ OnlineProdData InventoryModel::GetProdData(const ProductInstanceID& instanceId)
 	}
 	OnlineProdData item;
 	const auto productId = instanceId.lower_bits;
-	// TODO: GetProduct should return if item is favorited.
 	if (auto product = items.GetProduct(productId))
 	{
 		// Non default items can't be equipped without a valid instance id..

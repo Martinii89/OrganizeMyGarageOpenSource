@@ -30,7 +30,6 @@ class RandomPresetSelector {
  public:
   RandomPresetSelector(std::shared_ptr<GameWrapper> gw,
                        std::shared_ptr<PersistentStorage> ps,
-                       std::shared_ptr<CVarManagerWrapper> cv,
                        std::shared_ptr<GarageModel> gm,
                        std::shared_ptr<InventoryModel> im);
 
@@ -47,11 +46,11 @@ class RandomPresetSelector {
   bool SetRandomGoalExplosionEnabled(bool enabled);
 
  private:
-  std::shared_ptr<GameWrapper> m_gw;
-  std::shared_ptr<PersistentStorage> m_ps;
-  std::shared_ptr<CVarManagerWrapper> m_cv;
-  std::shared_ptr<GarageModel> m_gm;
-  std::shared_ptr<InventoryModel> m_im;
-  std::unordered_set<std::string> favorites;
+  std::shared_ptr<GameWrapper> gw_;
+  std::shared_ptr<PersistentStorage> ps_;
+  std::shared_ptr<GarageModel> gm_;
+  std::shared_ptr<InventoryModel> im_;
+  std::unordered_set<std::string> favorites_;
+
   bool preventSettingNextFavoritePreset{false};
 };

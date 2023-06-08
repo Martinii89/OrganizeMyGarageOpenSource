@@ -191,6 +191,9 @@
     <ClInclude Include="RandomPresetSelector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CVarManagerSingleton.h">
+      <Filter>Plugin\header</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="OrganizeMyGarageV2.rc">
