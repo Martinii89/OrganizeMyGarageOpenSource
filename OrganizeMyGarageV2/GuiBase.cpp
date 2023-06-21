@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "GuiBase.h"
+#include "CVarManagerSingleton.h"
 
 std::string SettingsWindowBase::GetPluginName()
 {
@@ -62,6 +63,8 @@ void PluginWindowBase::Render()
 
 	if (!isWindowOpen_)
 	{
-		_globalCvarManager->executeCommand("togglemenu " + GetMenuName());
+		auto cvar = CVarManagerSingleton::getInstance().getCvar();
+		if (cvar) 
+			cvar->executeCommand("togglemenu " + GetMenuName());
 	}
 }

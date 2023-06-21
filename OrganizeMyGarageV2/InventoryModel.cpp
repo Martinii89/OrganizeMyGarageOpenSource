@@ -86,13 +86,12 @@ OnlineProdData InventoryModel::GetProdData(const ProductInstanceID& instanceId)
 {
 	auto items = m_gw->GetItemsWrapper();
 	if (!items) return {};
-	if (auto onlineProduct = items.GetOnlineProduct(instanceId.lower_bits))
+	if (auto onlineProduct = items.GetOnlineProduct(instanceId))
 	{
 		return GetProdData(onlineProduct);
 	}
 	OnlineProdData item;
 	const auto productId = instanceId.lower_bits;
-	// TODO: GetProduct should return if item is favorited.
 	if (auto product = items.GetProduct(productId))
 	{
 		// Non default items can't be equipped without a valid instance id..

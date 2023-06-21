@@ -1,19 +1,21 @@
 ﻿#pragma once
 #include "GarageModel.h"
+#include "RandomPresetSelector.h"
 
 class InventoryModel;
 
 class OmgView
 {
 public:
-	explicit OmgView(std::shared_ptr<GarageModel> vm, std::shared_ptr<InventoryModel> inventory, std::shared_ptr<GameWrapper> gw);
+	explicit OmgView(std::shared_ptr<GarageModel> gm, std::shared_ptr<InventoryModel> im, std::shared_ptr<GameWrapper> gw, std::shared_ptr<RandomPresetSelector> rps);
 
 	void Render();
 
 private:
-	std::shared_ptr<GarageModel> m_vm;
-	std::shared_ptr<InventoryModel> m_inventory;
+	std::shared_ptr<GarageModel> m_gm;
+	std::shared_ptr<InventoryModel> m_im;
 	std::shared_ptr<GameWrapper> m_gw;
+	std::shared_ptr<RandomPresetSelector> m_rps;
 	size_t m_selectedIndex = 0;
 	float m_buttonHight = 0;
 

@@ -9,6 +9,8 @@ public:
 	void SetImGuiContext(uintptr_t ctx) override;
 };
 
+class CVarManagerWrapper;
+
 class PluginWindowBase : public BakkesMod::Plugin::PluginWindow
 {
 public:

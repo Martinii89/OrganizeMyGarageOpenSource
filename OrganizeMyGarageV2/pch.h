@@ -16,9 +16,3 @@
 #include "IMGUI/imgui_rangeslider.h"
 
 #include "logging.h"
-
-inline bool operator ==(const ProductInstanceID& lhs,const ProductInstanceID& rhs)
-{
-	return lhs.lower_bits == rhs.lower_bits
-		&& lhs.upper_bits == rhs.upper_bits;
-}

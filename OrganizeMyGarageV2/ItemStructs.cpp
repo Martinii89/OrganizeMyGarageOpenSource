@@ -18,6 +18,7 @@ void OnlineProdData::SetOfflineProductData(ProductWrapper& productWrapper)
 		return;
 	}
 	prodId = productWrapper.GetID();
+	favorite = productWrapper.IsFavorited();
 	//canEquip = product_wrapper.CanEquip();
 	name = productWrapper.GetLongLabel().ToString();
 	slot = productWrapper.GetSlot().GetSlotIndex();

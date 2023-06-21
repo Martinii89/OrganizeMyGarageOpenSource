@@ -122,8 +122,10 @@
     <ClCompile Include="OrganizeMyGarageOS.cpp" />
     <ClCompile Include="GuiBase.cpp" />
     <ClCompile Include="PersistentStorage.cpp" />
+    <ClCompile Include="RandomPresetSelector.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CVarManagerSingleton.h" />
     <ClInclude Include="HardcodedColors.h" />
     <ClInclude Include="ImguiUtils.h" />
     <ClInclude Include="imgui\imconfig.h" />
@@ -150,6 +152,7 @@
     <ClInclude Include="GuiBase.h" />
     <ClInclude Include="OrganizeMyGarageOS.h" />
     <ClInclude Include="PersistentStorage.h" />
+    <ClInclude Include="RandomPresetSelector.h" />
     <ClInclude Include="version.h" />
   </ItemGroup>
   <ItemGroup>
