@@ -8,8 +8,7 @@
 namespace {
 constexpr char kCvarGlobalNotificationsEnabled[] =
     "cl_notifications_enabled_beta";  // at least it's out of alpha phase
-constexpr char kCvarCycleFavEnabled[] = "omg_cycle_favorite_presets_enabled";
-constexpr char kCvarCycleFavShuffle[] = "omg_cycle_favorite_presets_shuffle";
+constexpr char kCvarCycleFavMethod[] = "omg_cycle_favorite_presets_enabled";
 constexpr char kCvarCycleFavNotify[] = "omg_cycle_favorite_presets_notify";
 constexpr char kCvarCycleFavList[] = "omg_cycle_favorites";
 constexpr char kCvarRandomGoalExplosion[] = "omg_random_goal_explosion";
@@ -21,6 +20,8 @@ class PersistentStorage;
 class CVarManagerWrapper;
 class GarageModel;
 class InventoryModel;
+
+enum SelectMethod { Disabled = 0, Cycle = 1, Shuffle = 2, Randomize = 3 };
 
 class RandomPresetSelector {
   void EquipNextFavoritePreset(const char* evName);
@@ -36,10 +37,8 @@ class RandomPresetSelector {
   void UpdateFavorite(const std::string& name, bool isFavorite);
   bool IsFavorite(const std::string& name) const;
   void LoadFavorites();
-  bool GetFavoritesEnabled() const;
-  bool SetFavoritesEnabled(bool enabled);
-  bool GetFavoritesShuffle() const;
-  bool SetFavoritesShuffle(bool shuffle);
+  SelectMethod GetFavoritesSelectionMethod() const;
+  bool SetFavoritesSelectionMethod(SelectMethod method);
   bool GetFavoritesNotify() const;
   bool SetFavoritesNotify(bool notify);
   bool GetRandomGoalExplosionEnabled() const;

@@ -35,21 +35,29 @@ void OmgView::Render()
 	ImGui::SameLine();
 	HelpMarker("WARNING: It will modify active preset.");
 
-	bool favoritesEnabled = m_rps->GetFavoritesEnabled();
-	if (ImGui::Checkbox("Cycle through favorite presets", &favoritesEnabled)) {
-		m_rps->SetFavoritesEnabled(favoritesEnabled);
-	}
-	if (ImGui::IsItemHovered()) {
-		ImGui::SetTooltip("Toggle cycling through favorite presets");
-	}
-	
-	bool favoritesShuffle = m_rps->GetFavoritesShuffle();
-	if (ImGui::Checkbox("Shuffle favorite presets", &favoritesShuffle)) {
-		m_rps->SetFavoritesShuffle(favoritesShuffle);
-	}
-	if (ImGui::IsItemHovered()) {
-		ImGui::SetTooltip("Shuffle presets instead of going through them sequentially.");
-	}
+	auto presetMode = m_rps->GetFavoritesSelectionMethod();
+    ImGui::Text("Favorite Preset Mode:");
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Disabled",
+                            presetMode == SelectMethod::Disabled)) {
+            presetMode = SelectMethod::Disabled;
+    }
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Cycle", presetMode == SelectMethod::Cycle)) {
+            presetMode = SelectMethod::Cycle;
+    }
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Shuffle",
+                            presetMode == SelectMethod::Shuffle)) {
+            presetMode = SelectMethod::Shuffle;
+    }
+    ImGui::SameLine();
+    if (ImGui::RadioButton("Randomize",
+                            presetMode == SelectMethod::Randomize)) {
+            presetMode = SelectMethod::Randomize;
+    }
+    m_rps->SetFavoritesSelectionMethod(presetMode);
+
 
 	bool favoritesNotify = m_rps->GetFavoritesNotify();
 	if (ImGui::Checkbox("Notify on preset change", &favoritesNotify)) {
