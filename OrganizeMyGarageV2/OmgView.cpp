@@ -36,27 +36,27 @@ void OmgView::Render()
 	HelpMarker("WARNING: It will modify active preset.");
 
 	auto presetMode = m_rps->GetFavoritesSelectionMethod();
-    ImGui::Text("Favorite Preset Mode:");
-    ImGui::SameLine();
-    if (ImGui::RadioButton("Disabled",
-                            presetMode == SelectMethod::Disabled)) {
-            presetMode = SelectMethod::Disabled;
-    }
-    ImGui::SameLine();
-    if (ImGui::RadioButton("Cycle", presetMode == SelectMethod::Cycle)) {
-            presetMode = SelectMethod::Cycle;
-    }
-    ImGui::SameLine();
-    if (ImGui::RadioButton("Shuffle",
-                            presetMode == SelectMethod::Shuffle)) {
-            presetMode = SelectMethod::Shuffle;
-    }
-    ImGui::SameLine();
-    if (ImGui::RadioButton("Randomize",
-                            presetMode == SelectMethod::Randomize)) {
-            presetMode = SelectMethod::Randomize;
-    }
-    m_rps->SetFavoritesSelectionMethod(presetMode);
+	ImGui::Text("Favorite Preset Mode:");
+	ImGui::SameLine();
+	if (ImGui::RadioButton("Disabled",
+							presetMode == SelectMethod::Disabled)) {
+			presetMode = SelectMethod::Disabled;
+	}
+	ImGui::SameLine();
+	if (ImGui::RadioButton("Cycle", presetMode == SelectMethod::Cycle)) {
+			presetMode = SelectMethod::Cycle;
+	}
+	ImGui::SameLine();
+	if (ImGui::RadioButton("Shuffle",
+							presetMode == SelectMethod::Shuffle)) {
+			presetMode = SelectMethod::Shuffle;
+	}
+	ImGui::SameLine();
+	if (ImGui::RadioButton("Randomize",
+							presetMode == SelectMethod::Randomize)) {
+			presetMode = SelectMethod::Randomize;
+	}
+	m_rps->SetFavoritesSelectionMethod(presetMode);
 
 
 	bool favoritesNotify = m_rps->GetFavoritesNotify();
@@ -180,7 +180,7 @@ void OmgView::RenderLoadoutEditor(const std::vector<OnlineProdData>& loadout, si
 				if (inventoryProduct.slot != 0 && !inventoryProduct.IsBodyCompatible(loadout[0].prodId)) continue;
 
 				auto lbl = std::format("{}: ##{}{}{}", inventoryProduct.name, inventoryProduct.prodId, inventoryProduct.slot,
-				                       inventoryProduct.instanceId.lower_bits);
+									   inventoryProduct.instanceId.lower_bits);
 				if (ImGui::Selectable(lbl.c_str(), selected))
 				{
 					OnGameThread([this, inventoryProduct, presetIndex, teamIndex](auto gw)
