@@ -94,7 +94,9 @@ T SelectNext(const std::vector<T>& items, size_t previous, SelectMethod method) 
 
   if (method == SelectMethod::Shuffle) {
     auto currIdx = std::lower_bound(items.cbegin(), items.cend(), previous);
-    const auto nextIdx = Shuffler::getInstance().getNext(currIdx - items.cbegin(), items.size());
+    if (currIdx == items.cend()) currIdx = items.cbegin();
+    const auto nextIdx =
+        Shuffler::getInstance().getNext(currIdx - items.cbegin(), items.size());
     return items[nextIdx];
   } else {
     auto nextIdx = std::upper_bound(items.cbegin(), items.cend(), previous);
