@@ -35,21 +35,29 @@ void OmgView::Render()
 	ImGui::SameLine();
 	HelpMarker("WARNING: It will modify active preset.");
 
-	bool favoritesEnabled = m_rps->GetFavoritesEnabled();
-	if (ImGui::Checkbox("Cycle through favorite presets", &favoritesEnabled)) {
-		m_rps->SetFavoritesEnabled(favoritesEnabled);
+	auto presetMode = m_rps->GetFavoritesSelectionMethod();
+	ImGui::Text("Favorite Preset Mode:");
+	ImGui::SameLine();
+	if (ImGui::RadioButton("Disabled",
+							presetMode == SelectMethod::Disabled)) {
+			presetMode = SelectMethod::Disabled;
 	}
-	if (ImGui::IsItemHovered()) {
-		ImGui::SetTooltip("Toggle cycling through favorite presets");
+	ImGui::SameLine();
+	if (ImGui::RadioButton("Cycle", presetMode == SelectMethod::Cycle)) {
+			presetMode = SelectMethod::Cycle;
 	}
-	
-	bool favoritesShuffle = m_rps->GetFavoritesShuffle();
-	if (ImGui::Checkbox("Shuffle favorite presets", &favoritesShuffle)) {
-		m_rps->SetFavoritesShuffle(favoritesShuffle);
+	ImGui::SameLine();
+	if (ImGui::RadioButton("Shuffle",
+							presetMode == SelectMethod::Shuffle)) {
+			presetMode = SelectMethod::Shuffle;
 	}
-	if (ImGui::IsItemHovered()) {
-		ImGui::SetTooltip("Shuffle presets instead of going through them sequentially.");
+	ImGui::SameLine();
+	if (ImGui::RadioButton("Randomize",
+							presetMode == SelectMethod::Randomize)) {
+			presetMode = SelectMethod::Randomize;
 	}
+	m_rps->SetFavoritesSelectionMethod(presetMode);
+
 
 	bool favoritesNotify = m_rps->GetFavoritesNotify();
 	if (ImGui::Checkbox("Notify on preset change", &favoritesNotify)) {
@@ -172,7 +180,7 @@ void OmgView::RenderLoadoutEditor(const std::vector<OnlineProdData>& loadout, si
 				if (inventoryProduct.slot != 0 && !inventoryProduct.IsBodyCompatible(loadout[0].prodId)) continue;
 
 				auto lbl = std::format("{}: ##{}{}{}", inventoryProduct.name, inventoryProduct.prodId, inventoryProduct.slot,
-				                       inventoryProduct.instanceId.lower_bits);
+									   inventoryProduct.instanceId.lower_bits);
 				if (ImGui::Selectable(lbl.c_str(), selected))
 				{
 					OnGameThread([this, inventoryProduct, presetIndex, teamIndex](auto gw)

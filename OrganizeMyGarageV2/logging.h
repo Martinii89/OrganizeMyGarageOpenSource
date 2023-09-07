@@ -9,8 +9,8 @@
 
 #include "CVarManagerSingleton.h"
 
-constexpr bool DEBUG_LOG = false;
-constexpr bool PERSISTENT_LOGGING = false;
+constexpr bool DEBUG_LOG = true;
+constexpr bool PERSISTENT_LOGGING = true;
 
 struct FormatString {
   std::string_view str;

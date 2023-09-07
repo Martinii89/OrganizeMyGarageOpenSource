@@ -1,12 +1,14 @@
 #include "pch.h"
 #include "RandomPresetSelector.h"
 
+#include <algorithm>
 #include <random>
+#include <unordered_map>
 
+#include "CVarManagerSingleton.h"
 #include "GarageModel.h"
 #include "InventoryModel.h"
 #include "PersistentStorage.h"
-#include "CVarManagerSingleton.h"
 
 namespace {
 bool GetCvarBoolOrFalse(const char* cvarName) {
@@ -17,7 +19,16 @@ bool GetCvarBoolOrFalse(const char* cvarName) {
   return false;
 }
 
-bool SetCvarVariable(const char* cvarName, bool value) {
+int GetCvarBoolOrZero(const char* cvarName) {
+  auto cv = CVarManagerSingleton::getInstance().getCvar();
+  if (!cv) return false;
+  auto cvarWrap = cv->getCvar(cvarName);
+  if (cvarWrap) return cvarWrap.getIntValue();
+  return 0;
+}
+
+template<typename T>
+bool SetCvarVariable(const char* cvarName, T value) {
   auto cv = CVarManagerSingleton::getInstance().getCvar();
   if (!cv) return false;
   CVarWrapper cvarWrap = cv->getCvar(cvarName);
@@ -28,8 +39,42 @@ bool SetCvarVariable(const char* cvarName, bool value) {
   return false;
 }
 
+/// <summary>
+/// Class that handles shuffling array of indices. 
+/// We keep the shuffle order consistent thorugh the runtime.
+/// </summary>
+class Shuffler {
+ public:
+  static Shuffler& getInstance() {
+    static Shuffler instance;
+    return instance;
+  }
+  size_t getNext(size_t idx, size_t n) {
+    auto it = precomputedShuffles.find(n);
+    if (it == precomputedShuffles.end())
+      it = precomputedShuffles.insert({n, create(n)}).first;
+    return it->second[idx];
+  }
+
+ private:
+  std::vector<size_t> create(size_t size) {
+    // just shuffling a vector could create a cycle shorter than size
+    std::vector<size_t> shuffled(size), ret(size);
+    for (size_t i = 0; i < size; ++i) shuffled[i] = i;
+    std::random_device rd;
+    std::mt19937 mt(rd());
+    std::shuffle(shuffled.begin(), shuffled.end(), mt);
+    for (size_t i = 0; i < size; ++i) {
+      ret[shuffled[i]] = shuffled[(i + 1) % size];
+    }
+    return ret;
+  }
+
+  std::unordered_map<size_t, std::vector<size_t>> precomputedShuffles;
+};
+
 template <typename T>
-T SelectNext(const std::vector<T>& items, size_t previous, bool shuffle) {
+T SelectNext(const std::vector<T>& items, size_t previous, SelectMethod method) {
   if (items.empty()) {
     DEBUGLOG("PANIC! Nothing to select!");
     return {};
@@ -39,15 +84,24 @@ T SelectNext(const std::vector<T>& items, size_t previous, bool shuffle) {
     return items.front();
   }
 
-  if (shuffle) {
+  if (method == SelectMethod::Randomize) {
     std::random_device rd;
     std::mt19937 mt(rd());
     std::uniform_int_distribution<> dist(
         0, int(items.size() - 1));  // range is inclusive
     return items[dist(mt)];
   }
-  auto currIdx = std::upper_bound(items.cbegin(), items.cend(), previous);
-  return (currIdx == items.cend()) ? items.front() : *currIdx;
+
+  if (method == SelectMethod::Shuffle) {
+    auto currIdx = std::lower_bound(items.cbegin(), items.cend(), previous);
+    if (currIdx == items.cend()) currIdx = items.cbegin();
+    const auto nextIdx =
+        Shuffler::getInstance().getNext(currIdx - items.cbegin(), items.size());
+    return items[nextIdx];
+  } else {
+    auto nextIdx = std::upper_bound(items.cbegin(), items.cend(), previous);
+    return (nextIdx == items.cend()) ? items.front() : *nextIdx;
+  }
 }
 }  // end of anonymous namespace
 
@@ -58,20 +112,17 @@ RandomPresetSelector::RandomPresetSelector(
       ps_(std::move(ps)),
       gm_(std::move(gm)),
       im_(std::move(im)) {
-  ps_->RegisterPersistentCvar(kCvarCycleFavEnabled, "0",
-                               "Enable cycling through favorite presets", true,
-                               true, 0, true, 1, true);
-  ps_->RegisterPersistentCvar(kCvarCycleFavShuffle, "0",
-                               "Shuffle the favorite presets", true, true, 0,
-                               true, 1, true);
+  ps_->RegisterPersistentCvar(kCvarCycleFavMethod, "0",
+                              "Method of cycling through favorite presets", true,
+                              true, 0, true, 3, true);
   ps_->RegisterPersistentCvar(kCvarCycleFavNotify, "0",
-                               "Notify on automatic preset change", true, true,
-                               0, true, 1, true);
+                              "Notify on automatic preset change", true, true,
+                              0, true, 1, true);
   ps_->RegisterPersistentCvar(kCvarRandomGoalExplosion, "0",
-                               "Random Goal Explosion", true, true, 0, true, 1,
-                               true);
+                              "Random Goal Explosion", true, true, 0, true, 1,
+                              true);
   ps_->RegisterPersistentCvar(kCvarCycleFavList, "", "List of favorites", true,
-                               false, 0, false, 1, true)
+                              false, 0, false, 1, true)
       .addOnValueChanged([this](...) { this->LoadFavorites(); });
 
   LoadFavorites();
@@ -87,7 +138,7 @@ RandomPresetSelector::RandomPresetSelector(
 
   // Each kickoff enables changing preset
   gw_->HookEvent("Function GameEvent_Soccar_TA.Active.StartRound",
-                  [this](...) { preventSettingNextFavoritePreset = false; });
+                 [this](...) { preventSettingNextFavoritePreset = false; });
 }
 
 void RandomPresetSelector::UpdateFavorite(const std::string& name,
@@ -119,20 +170,12 @@ bool RandomPresetSelector::IsFavorite(const std::string& name) const {
   return favorites_.find(name) != favorites_.end();
 }
 
-bool RandomPresetSelector::GetFavoritesEnabled() const {
-  return GetCvarBoolOrFalse(kCvarCycleFavEnabled);
+SelectMethod RandomPresetSelector::GetFavoritesSelectionMethod() const {
+  return static_cast<SelectMethod>(GetCvarBoolOrZero(kCvarCycleFavMethod));
 }
 
-bool RandomPresetSelector::SetFavoritesEnabled(bool enabled) {
-  return SetCvarVariable(kCvarCycleFavEnabled, enabled);
-}
-
-bool RandomPresetSelector::GetFavoritesShuffle() const {
-  return GetCvarBoolOrFalse(kCvarCycleFavShuffle);
-}
-
-bool RandomPresetSelector::SetFavoritesShuffle(bool shuffle) {
-  return SetCvarVariable(kCvarCycleFavShuffle, shuffle);
+bool RandomPresetSelector::SetFavoritesSelectionMethod(SelectMethod value) {
+  return SetCvarVariable(kCvarCycleFavMethod, value);
 }
 
 bool RandomPresetSelector::GetFavoritesNotify() const {
@@ -170,7 +213,8 @@ void RandomPresetSelector::SaveFavorites() const {
 
 void RandomPresetSelector::EquipNextFavoritePreset(const char* evName) {
   DEBUGLOG("EquipNextFavoritePreset {}", evName);
-  if (!GetCvarBoolOrFalse(kCvarCycleFavEnabled)) return;
+  SelectMethod method = GetFavoritesSelectionMethod();
+  if (method == SelectMethod::Disabled) return;
 
   // If multiple events trigger swapping presets,
   // do not do it again unless a game/kickoff started.
@@ -185,16 +229,15 @@ void RandomPresetSelector::EquipNextFavoritePreset(const char* evName) {
   favIndices.reserve(presets.size());
   for (size_t i = 0; i < presets.size(); ++i) {
     // i != equippedPresetIndex ensures we don't have same preset twice in a row
-    if (i != equippedPresetIndex &&
-        favorites_.find(presets[i].name) != favorites_.end())
+    const bool skip = method == SelectMethod::Randomize && i == equippedPresetIndex;
+    if (!skip && favorites_.find(presets[i].name) != favorites_.end())
       favIndices.push_back(i);
   }
 
   if (favIndices.empty()) return;
 
   size_t nextPresetIndex =
-      SelectNext(favIndices, equippedPresetIndex,
-                 GetCvarBoolOrFalse(kCvarCycleFavShuffle));
+      SelectNext(favIndices, equippedPresetIndex, method);
 
   if (GetFavoritesNotify()) {
     // Nasty hack because the notification settings are global: enabling them
@@ -203,7 +246,7 @@ void RandomPresetSelector::EquipNextFavoritePreset(const char* evName) {
         GetCvarBoolOrFalse(kCvarGlobalNotificationsEnabled);
     if (SetCvarVariable(kCvarGlobalNotificationsEnabled, true)) {
       gw_->Toast("OMG: Next Preset", presets[nextPresetIndex].name, "default",
-                  10.0, ToastType_Info);
+                 10.0, ToastType_Info);
     }
     if (!oldNotifications)
       SetCvarVariable(kCvarGlobalNotificationsEnabled, false);
@@ -255,8 +298,8 @@ void RandomPresetSelector::RandomGoalExplosion(const char* evName) {
     return;
   }
 
-  const auto& nextGoalExplosion =
-      goalExplosions[SelectNext(favorited, currentGoalExplosionFavIdx, true)];
+  const auto& nextGoalExplosion = goalExplosions[SelectNext(
+      favorited, currentGoalExplosionFavIdx, SelectMethod::Randomize)];
 
   LOG("Equipping goal explosion {}!", nextGoalExplosion.name);
 
